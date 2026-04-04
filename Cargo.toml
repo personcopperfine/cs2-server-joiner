@@ -2,6 +2,7 @@
 name = "cs2-server-joiner"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/personcopperfine/cs2-server-joiner"
 
 [dependencies]
 clap = { version = "4.6.0", features = ["derive"] }
@@ -9,3 +10,8 @@ clearscreen = { version = "4.0.6", features = ["windows-console"] }
 gamedig = "0.9.0"
 open = "5"
 tabled = "0.20.0"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
