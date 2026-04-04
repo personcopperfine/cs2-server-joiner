@@ -14,7 +14,7 @@ use tabled::{
 struct Args {
     ip: String,
 
-    /// Join when less than this amount of players
+    /// Port to use
     #[arg(long, default_value_t = 27015)]
     port: u16,
 

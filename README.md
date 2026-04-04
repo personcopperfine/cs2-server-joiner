@@ -7,7 +7,7 @@ Arguments:
   <IP>  
 
 Options:
-      --port <PORT>        Join when less than this amount of players
+      --port <PORT>        Port to use
   -p, --players <PLAYERS>  Join when less than this amount of players
   -c, --check <CHECK>      How often to check if there's a slot available
   -h, --help               Print help
