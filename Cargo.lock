@@ -174,7 +174,7 @@ dependencies = [
 
 [[package]]
 name = "cs2-server-joiner"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "clearscreen",

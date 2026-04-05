@@ -126,6 +126,7 @@ fn main() {
                     ))
                     .expect("we can open steam links");
 
+                    print!("\x07");
                     println!("Press [enter] to continue:");
                     let mut _input: String = String::default();
                     let _ = io::stdin().read_line(&mut _input);
