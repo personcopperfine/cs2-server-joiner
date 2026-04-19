@@ -1,13 +1,13 @@
 [package]
 name = "cs2-server-joiner"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 repository = "https://github.com/personcopperfine/cs2-server-joiner"
 
 [dependencies]
 clap = { version = "4.6.0", features = ["derive"] }
 clearscreen = { version = "4.0.6", features = ["windows-console"] }
-gamedig = "0.9.0"
+gamedig = { version = "0.9.0", features = ["games"] }
 open = "5"
 tabled = "0.20.0"
 

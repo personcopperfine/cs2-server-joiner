@@ -1,5 +1,10 @@
 use clap::Parser;
-use std::{io, net::IpAddr, thread::sleep, time::Duration};
+use std::{
+    io,
+    net::{IpAddr, SocketAddr},
+    thread::sleep,
+    time::Duration,
+};
 use tabled::{
     Table, Tabled,
     settings::{
@@ -53,12 +58,37 @@ fn display_time(o: &f32) -> String {
     format!("{:02}:{:02}", time / 60, time % 60)
 }
 
-use gamedig::games::counterstrike2 as game;
-use gamedig::protocols::valve::game::Response;
+use gamedig::{
+    TimeoutSettings,
+    protocols::{
+        types::GatherToggle,
+        valve::{self, Engine, GatheringSettings},
+    },
+};
 
 fn main() {
     let argv = Args::parse();
     let ip: IpAddr = (&argv.ip).parse().expect("valid IP");
+    let address = &SocketAddr::new(ip, argv.port);
+
+    let engine = Engine::Source(Some((730, None))); // We don't specify a steam app id, let the query try to find it.
+    let gather_settings = GatheringSettings {
+        players: GatherToggle::Enforce, // We want to query for players
+        rules: GatherToggle::Skip,      // We don't want to query for rules
+        check_app_id: false,            // Loosen up the query a bit by not checking app id
+    };
+
+    let read_timeout = Duration::from_secs(1);
+    let write_timeout = Duration::from_secs(1);
+    let connect_timeout = Duration::from_secs(1);
+    let retries = 1; // does another request if the first one fails.
+    let timeout_settings = TimeoutSettings::new(
+        Some(read_timeout),
+        Some(write_timeout),
+        Some(connect_timeout),
+        retries,
+    )
+    .unwrap();
 
     #[inline]
     fn style_table(table: &mut Table, header: &String, footer: &String) {
@@ -82,27 +112,36 @@ fn main() {
     }
 
     #[inline]
-    fn format_response(r: &Response) -> String {
+    fn format_response(r: &gamedig::protocols::valve::Response) -> String {
         format!(
             "{map} ({players_online}/{players_maximum})",
-            map = r.map,
-            players_online = r.players_online,
-            players_maximum = r.players_maximum,
+            map = r.info.map,
+            players_online = r.info.players_online,
+            players_maximum = r.info.players_maximum,
         )
     }
 
+    let mut error_count = 0;
     loop {
-        match game::query(&ip, Some(argv.port)) {
+        match valve::query(
+            address,
+            engine,
+            Some(gather_settings),
+            Some(timeout_settings),
+        ) {
             Ok(response) => {
-                let mut players: Vec<Player> = response
-                    .players_details
-                    .iter()
-                    .map(|player| Player {
-                        name: player.name.clone(),
-                        score: player.score,
-                        duration: player.duration,
-                    })
-                    .collect();
+                let mut players: Vec<Player> = vec![];
+
+                if let Some(players_details) = &response.players {
+                    players = players_details
+                        .iter()
+                        .map(|player| Player {
+                            name: player.name.clone(),
+                            score: player.score,
+                            duration: player.duration,
+                        })
+                        .collect();
+                }
 
                 players.sort_by_key(|p| {
                     // Assuming empty player names are connecting, move them to the bottom
@@ -115,14 +154,13 @@ fn main() {
 
                 let _ = clearscreen::clear();
                 let mut table = Table::new(players);
-                style_table(&mut table, &response.name, &format_response(&response));
+                style_table(&mut table, &response.info.name, &format_response(&response));
 
                 println!("{}", table);
-                if response.players_online < argv.players {
+                if response.info.players_online < argv.players {
                     open::that(format!(
                         "steam://rungame/730/76561202255233023/+connect%20{}:{}",
-                        argv.ip,
-                        response.port.unwrap_or(27015)
+                        argv.ip, argv.port
                     ))
                     .expect("we can open steam links");
 
@@ -133,7 +171,10 @@ fn main() {
                 }
             }
             Err(err) => {
-                panic!("error: {}", err);
+                println!("error: {}", err);
+
+                error_count += 1;
+                sleep(Duration::from_secs(error_count));
             }
         }
 
